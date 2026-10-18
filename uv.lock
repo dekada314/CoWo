@@ -409,12 +409,14 @@ dependencies = [
     { name = "aioboto3" },
     { name = "asyncpg" },
     { name = "dependency-injector" },
+    { name = "dishka" },
     { name = "falkordb" },
     { name = "fastapi" },
     { name = "langgraph" },
     { name = "pydantic-settings" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "types-aiobotocore-s3" },
     { name = "uvicorn" },
 ]
 
@@ -423,12 +425,14 @@ requires-dist = [
     { name = "aioboto3", specifier = ">=15.5.0" },
     { name = "asyncpg", specifier = ">=0.32.0" },
     { name = "dependency-injector", specifier = ">=4.49.1" },
+    { name = "dishka", specifier = ">=1.10.1" },
     { name = "falkordb", specifier = ">=1.8.0" },
     { name = "fastapi", specifier = ">=0.143.3" },
     { name = "langgraph", specifier = ">=1.2.15" },
     { name = "pydantic-settings", specifier = ">=2.16.0" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.5" },
+    { name = "types-aiobotocore-s3", specifier = ">=3.9.2" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
@@ -445,6 +449,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ee/ef/d715f4cd2e947fddc4c8763be1c4099793caf38aa1a099b6d621ecfeb768/dependency_injector-4.49.1-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:ba7e94e4323219c93dac35aabba7efa4e91c9afeac044b1d50bdc66a00a07238", size = 1845636, upload-time = "2026-06-18T17:51:07.023Z" },
     { url = "https://files.pythonhosted.org/packages/e7/32/03d1e5e0c6b79eaabf2ed4155302df05832e54789cc9f670cc62af20897b/dependency_injector-4.49.1-cp310-abi3-win32.whl", hash = "sha256:5a6e3a0df8cff636da3d7212473e30dff897c5bdbca2dd3049b5363012a495fa", size = 1548655, upload-time = "2026-06-18T17:51:08.721Z" },
     { url = "https://files.pythonhosted.org/packages/93/51/ce3ca96314f93f44358523cb8cdf81c8c1e002b4e097141e460bc598c87f/dependency_injector-4.49.1-cp310-abi3-win_amd64.whl", hash = "sha256:153f6b8d1db35d1fc9b001e41564a47ab2a7708038fecefadf3afada8ec7f814", size = 1676934, upload-time = "2026-06-18T17:51:10.465Z" },
+]
+
+[[package]]
+name = "dishka"
+version = "1.10.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/da/b75b5fe665d16725e1d46e291c8dd4b0ed1731c7964f41087fda92f03d40/dishka-1.10.1.tar.gz", hash = "sha256:51fb624b9acc948b90f57128460061d1f3a1780121fe1c7d14c565e8bbff2083", size = 282008, upload-time = "2026-04-25T12:07:57.587Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/08/dd3259a319ba45c48d975caf237c830c7873a203288cb4ab186cc5bef585/dishka-1.10.1-py3-none-any.whl", hash = "sha256:84f40c1115eb391ce3fb558fd7946c5bcaf6361c35b77b7a185b7697a5720ec7", size = 120062, upload-time = "2026-04-25T12:07:59.153Z" },
 ]
 
 [[package]]
@@ -1358,6 +1371,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz", hash = "sha256:30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd", size = 28091, upload-time = "2026-10-12T22:27:31.808Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/e9/3a7820be2bb0fe53b6bc9c3be26d3d1158004e4c3ab953aa6840b955b1e9/truststore-0.10.5-py3-none-any.whl", hash = "sha256:9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c", size = 19017, upload-time = "2026-10-12T22:27:30.377Z" },
+]
+
+[[package]]
+name = "types-aiobotocore-s3"
+version = "3.9.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/cd/5631df53041edf8322ad9c2a4a1e4c1ecd14b781010574f7cdf9ece72c95/types_aiobotocore_s3-3.9.2.tar.gz", hash = "sha256:10709325d2acc792ad9fa12d0fff93103d0685a36e4e08c1e8252ba80ca86570", size = 80064, upload-time = "2026-10-01T04:44:39.402Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2e/ee/b3d3d915902f55d2edb4c02f16f6e73ed16a8051207d027c99104af7bdcb/types_aiobotocore_s3-3.9.2-py3-none-any.whl", hash = "sha256:1f50994fb362aa6e466b48957742415c838f153657129edb444565091a0d73b3", size = 87965, upload-time = "2026-10-01T04:44:38.039Z" },
 ]
 
 [[package]]
