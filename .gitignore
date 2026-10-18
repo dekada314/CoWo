@@ -32,3 +32,4 @@ venv/
 logs/*
 !logs/.gitkeep
 *.log
+*test.py
