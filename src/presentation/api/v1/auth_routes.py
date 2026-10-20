@@ -3,6 +3,7 @@ from fastapi import APIRouter, status
 
 router = APIRouter(prefix="/auth")
 
+
 @router.get(path="/health_check")
 @inject
 async def health_check():

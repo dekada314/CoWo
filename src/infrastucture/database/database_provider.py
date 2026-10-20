@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import (
 from src.core.settings import PostgresSettings
 
 
-class DatabaseProvider(Provider):
+class DBConnectionProvider(Provider):
     def __init__(
         self, config: PostgresSettings, scope=None, component=None, when=None
     ):

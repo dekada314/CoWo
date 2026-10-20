@@ -14,6 +14,19 @@ class FalkorDBStorage:
     def _graph(self):
         return self._client.select_graph(self._config.graph_name)
 
+    async def create_domain(self, name: str, description: str):
+        query = """
+        CREATE (d:Domain {
+            name: $name,
+            description: $description,
+        })
+        RETURN id(d)
+        """
+        result = await self._graph.query(
+            q=query, params={"name": name, "description": description}
+        )
+        return str(result.result_set[0][0])
+
     async def create_concept(
         self,
         name: str,
@@ -37,6 +50,30 @@ class FalkorDBStorage:
                 "description": description,
                 "embedding": embedding,
                 "domain_id": domain_id,
+            },
+        )
+        return str(result.result_set[0][0])
+
+    async def create_card(
+        self,
+        summary: str,
+        document_id: str,
+        key_points: list[str],
+    ) -> str:
+        query = """
+            CREATE (card:Card {
+                summary: $summary,
+                document_id: $document_id,
+                key_points: $key_points
+            })
+            RETURN id(card)
+            """
+        result = await self._graph.query(
+            query,
+            {
+                "summary": summary,
+                "document_id": document_id,
+                "key_points": key_points,
             },
         )
         return str(result.result_set[0][0])
@@ -123,7 +160,9 @@ class FalkorDBStorage:
         MATCH path = (start)-[:RELATED_TO*1..{hops}]-(connected:Concept)
         RETURN DISTINCT id(connected), connected.name, connected.description, length(path) AS distance
         """
-        result = await self._graph.query(query, {"ids": [int(cid) for cid in concept_ids]})
+        result = await self._graph.query(
+            query, {"ids": [int(cid) for cid in concept_ids]}
+        )
         concepts = [
             {
                 "id": str(row[0]),
@@ -144,7 +183,9 @@ class FalkorDBStorage:
         MATCH (card:Card)-[:MENTIONS]->(c)
         RETURN DISTINCT id(card), card.summary, card.document_id
         """
-        result = await self._graph.query(query, {"ids": [int(cid) for cid in concept_ids]})
+        result = await self._graph.query(
+            query, {"ids": [int(cid) for cid in concept_ids]}
+        )
         return [
             {
                 "id": str(row[0]),
@@ -153,30 +194,6 @@ class FalkorDBStorage:
             }
             for row in result.result_set
         ]
-
-    async def create_card(
-        self,
-        summary: str,
-        document_id: str,
-        key_points: list[str],
-    ) -> str:
-        query = """
-        CREATE (card:Card {
-            summary: $summary,
-            document_id: $document_id,
-            key_points: $key_points
-        })
-        RETURN id(card)
-        """
-        result = await self._graph.query(
-            query,
-            {
-                "summary": summary,
-                "document_id": document_id,
-                "key_points": key_points,
-            },
-        )
-        return str(result.result_set[0][0])
 
     async def create_vector_index(
         self,

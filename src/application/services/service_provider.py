@@ -23,7 +23,9 @@ class ServiceProvider(Provider):
     @provide(scope=Scope.APP)
     async def file_service(self, minio_client: S3Client) -> FileStorage:
         return MinioFileStorage(client=minio_client, config=self._config.minio)
-    
+
     @provide(scope=Scope.APP)
     async def graph_storage(self, falkor_client: FalkorDB) -> GraphStorage:
-        return FalkorDBStorage(client=falkor_client, config=self._config.falkordb)
+        return FalkorDBStorage(
+            client=falkor_client, config=self._config.falkordb
+        )

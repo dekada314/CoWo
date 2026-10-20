@@ -7,13 +7,13 @@ from fastapi import APIRouter, FastAPI
 
 from src.application.services.service_provider import ServiceProvider
 from src.core.settings import get_settings
-from src.infrastucture.database.database_provider import DatabaseProvider
+from src.infrastucture.database.database_provider import DBConnectionProvider
 from src.infrastucture.infrastructure_provider import InfrastructureProvider
 from src.presentation.api.v1.auth_routes import router as auth_router
 
 config = get_settings()
 container = make_async_container(
-    DatabaseProvider(config.postgres),
+    DBConnectionProvider(config.postgres),
     InfrastructureProvider(config),
     ServiceProvider(config),
     FastapiProvider(),
