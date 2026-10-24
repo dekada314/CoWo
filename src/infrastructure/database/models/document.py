@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from domain.enums import ProcessingStage
+from src.domain.enums import ProcessingStage
 from src.infrastructure.database.models.base import Base
 
 if TYPE_CHECKING:

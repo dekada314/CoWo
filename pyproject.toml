@@ -8,14 +8,28 @@ dependencies = [
     "aioboto3>=15.5.0",
     "alembic>=1.20.0",
     "asyncpg>=0.32.0",
-    "dependency-injector>=4.49.1",
+    "chonkie>=1.7.0",
     "dishka>=1.10.1",
+    "docling>=2.142.0",
     "falkordb>=1.8.0",
     "fastapi>=0.143.3",
     "langgraph>=1.2.15",
+    "pdf-inspector>=1.25.2",
     "pydantic-settings>=2.16.0",
+    "pymupdf>=2.0",
+    "python-docx>=1.2.0",
     "redis>=8.1.0",
     "sqlalchemy[asyncio]>=2.1.5",
+    "taskiq>=0.13.0",
+    "taskiq-aio-pika>=0.6.1",
+    "taskiq-fastapi>=0.5.0",
+    "taskiq-redis>=1.2.4",
+    "transformers>=5.20.2",
     "types-aiobotocore-s3>=3.9.2",
     "uvicorn>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]

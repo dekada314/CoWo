@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from src.infrastructure.database.models.base import Base
 
-from domain.enums import JobStatus, ProcessingStage
+from src.domain.enums import JobStatus, ProcessingStage
 
 
 class IngestionJobORM(Base):

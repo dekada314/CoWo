@@ -109,12 +109,48 @@ services:
       retries: 5
     networks:
       - cowo_back_network
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:4.0-management
+    env_file:
+      - .env
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+      - rabbit_log:/var/log/rabbitmq
+      - rabbit_conf:/etc/rabbitmq/rabbitmq.conf
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: always
+    networks:
+      - cowo_back_network
+  worker:
+    build: .
+    command: >
+      taskiq worker src.infrastructure.taskiq.broker:broker 
+      --workers 4
+      --fs-discover
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
 
 
 volumes:
   postgres_data:
   minio_data:
   redis_data:
+  rabbit_data:
+  rabbit_log:
+  rabbit_conf:
   falkordb_data:
 
 networks:

@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from src.infrastructure.database.models.base import Base
 
-from domain.enums import AgentRunStatus
+from src.domain.enums import AgentRunStatus
 
 
 class AgentRunORM(Base):
