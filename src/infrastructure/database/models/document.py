@@ -1,59 +1,36 @@
-import enum
-import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    Boolean,
-    Enum,
-    ForeignKey,
-    String,
-)
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.domain.enums import ProcessingStage
 from src.infrastructure.database.models.base import Base
 
 if TYPE_CHECKING:
+    from src.infrastructure.database.models.document_version import (
+        DocumentVersionORM,
+    )
     from src.infrastructure.database.models.user import UserORM
 
 
 class DocumentORM(Base):
     __tablename__ = "documents"
 
-    s3_file_key: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-    )
-
-    doc_name: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-    )
-
-    doc_type: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-    )
-
-    processing_stage: Mapped[ProcessingStage] = mapped_column(
-        Enum(
-            ProcessingStage,
-            name="processing_stage",
-            values_callable=lambda enum_cls: [
-                member.value for member in enum_cls
-            ],
-        ),
-        nullable=False,
-        default=ProcessingStage.UPLOADED,
-    )
-
-    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
+    uploaded_by: Mapped[str | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    doc_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    doc_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
-    uploaded_by_user: Mapped[UserORM | None] = relationship(
+    versions: Mapped[list["DocumentVersionORM"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        lazy="raise",
+    )
+    uploader: Mapped["UserORM | None"] = relationship(
         back_populates="documents",
+        lazy="raise",
     )

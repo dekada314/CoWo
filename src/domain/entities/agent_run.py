@@ -5,6 +5,8 @@ from uuid import UUID
 from src.domain.enums import AgentRunStatus
 
 tz = timezone(offset=timedelta(hours=3))
+
+
 @dataclass
 class AgentRun:
     id: UUID

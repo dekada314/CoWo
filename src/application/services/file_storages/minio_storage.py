@@ -2,15 +2,15 @@ from dataclasses import dataclass
 from typing import AsyncIterator
 from uuid import uuid4
 
-from src.core.settings import MinioSettings
-
-from application.interfaces.storages.file_storage import (
+from src.application.interfaces.storages.file_storage import (
     FileMetadata,
+    FileStorage,
     StoredFile,
 )
+from src.core.settings import MinioSettings
 
 
-class MinioFileStorage:
+class MinioFileStorage(FileStorage):
     def __init__(self, client, config: MinioSettings) -> None:
         self._client = client
         self._config = config

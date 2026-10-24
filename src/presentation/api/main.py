@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from dishka import make_async_container
 from dishka.integrations.fastapi import FastapiProvider, setup_dishka
 from fastapi import APIRouter, FastAPI
+
 from src.application.services.service_provider import ServiceProvider
 from src.core.settings import get_settings
 from src.infrastructure.clients.clients_provider import ClientsProvider
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     if not broker.is_worker_process:
         await broker.shutdown()
-    container.close()
+    await container.close()
 
 
 app = FastAPI(

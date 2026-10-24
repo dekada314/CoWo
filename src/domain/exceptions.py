@@ -9,5 +9,6 @@ class FileStorageError(DomainError):
 class GraphStorageError(DomainError):
     """Ошибка инфраструктурного слоя графа."""
 
+
 class RepositoryError(DomainError):
     """Ошибка слоя работы с БД."""

@@ -1,21 +1,27 @@
+import io
 from uuid import uuid4
+
+from docx import Document
 
 from pipelines.ingestion.parsing.strategies.parser_strategy import (
     ParsedPage,
 )
+from src.pipelines.ingestion.chunkers.base_chunker import BaseChunker
+from src.pipelines.ingestion.parsing.strategies.parser_strategy import (
+    ParsedChunk,
+)
 
 
 class DocxStrategy:
-    def parse(
+    def __init__(self, chunker: BaseChunker):
+        self._chunker = chunker
+
+    async def parse(
         self, content: bytes, filename: str = "unknown.docx"
-    ) -> list[ParsedPage]:
-        import io
-
-        from docx import Document
-
+    ) -> list[ParsedChunk]:
         doc = Document(io.BytesIO(content))
         pages: list[ParsedPage] = []
-        document_id = str(uuid4())
+        document_id = filename or str(uuid4())
         current_heading = None
 
         section_texts: list[tuple[str | None, list[str]]] = []
@@ -48,4 +54,14 @@ class DocxStrategy:
                 )
             )
 
-        return pages
+        chunks = self._chunker.get_chunks(pages)
+
+        return [
+            ParsedChunk(
+                text=chunk.text,
+                raw_text=chunk.text,
+                index=chunk.index,
+                metadata=dict(chunk.metadata),
+            )
+            for chunk in chunks
+        ]

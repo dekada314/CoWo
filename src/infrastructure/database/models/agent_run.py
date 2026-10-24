@@ -3,9 +3,9 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from src.infrastructure.database.models.base import Base
 
 from src.domain.enums import AgentRunStatus
+from src.infrastructure.database.models.base import Base
 
 
 class AgentRunORM(Base):

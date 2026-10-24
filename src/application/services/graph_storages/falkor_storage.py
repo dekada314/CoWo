@@ -1,10 +1,12 @@
 from typing import Any
 
 from falkordb.asyncio import FalkorDB
+
+from src.application.interfaces.storages.graph_storage import GraphStorage
 from src.domain.exceptions import GraphStorageError
 
 
-class FalkorDBStorage:
+class FalkorDBStorage(GraphStorage):
     def __init__(self, client: FalkorDB, graph_name: str):
         self._client = client
         self._graph_name = graph_name

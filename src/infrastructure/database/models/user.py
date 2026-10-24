@@ -8,19 +8,17 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.infrastructure.database.models.base import Base
 
 if TYPE_CHECKING:
-    from src.infrastructure.database.models.document import Document
+    from src.infrastructure.database.models.document import DocumentORM
 
 
 class UserORM(Base):
     __tablename__ = "users"
 
-    email: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-    )
+    email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     password_hash: Mapped[str] = mapped_column(
         String,

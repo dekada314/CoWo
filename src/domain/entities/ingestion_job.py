@@ -6,6 +6,7 @@ from src.domain.enums import JobStatus, ProcessingStage
 
 tz = timezone(offset=timedelta(hours=3))
 
+
 @dataclass
 class IngestionJob:
     id: UUID

@@ -1,8 +1,9 @@
 import asyncio
 
-from src.core.settings import get_settings
 from taskiq_aio_pika import AioPikaBroker
 from taskiq_redis import RedisAsyncResultBackend
+
+from src.core.settings import get_settings
 
 settings = get_settings()
 

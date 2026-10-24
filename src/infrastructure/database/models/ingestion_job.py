@@ -4,9 +4,9 @@ from datetime import datetime
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
-from src.infrastructure.database.models.base import Base
 
 from src.domain.enums import JobStatus, ProcessingStage
+from src.infrastructure.database.models.base import Base
 
 
 class IngestionJobORM(Base):

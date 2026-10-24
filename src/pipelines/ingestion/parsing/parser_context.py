@@ -1,3 +1,5 @@
+from typing import runtime_checkable
+
 from src.pipelines.ingestion.parsing.pdf_router import PdfRouter
 from src.pipelines.ingestion.parsing.strategies.docx_strategy import (
     DocxStrategy,
@@ -14,6 +16,7 @@ class RAGDocumentParser:
     def __init__(self):
         self._strategies = {}
 
+    @runtime_checkable
     def register_strategy(
         self, extension: str, strategy: ParserStrategy
     ) -> None:

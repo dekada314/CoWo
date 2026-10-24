@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import AsyncIterator, Protocol
+from typing import AsyncIterator
+from abc import ABC, abstractmethod
 
 
 @dataclass(frozen=True)
@@ -18,7 +19,8 @@ class FileMetadata:
     etag: str
 
 
-class FileStorage(Protocol):
+class FileStorage(ABC):
+    @abstractmethod
     async def upload(
         self,
         data: bytes,
@@ -26,23 +28,23 @@ class FileStorage(Protocol):
         content_type: str = "application/octet-stream",
         prefix: str = "",
     ) -> StoredFile: ...
-
+    @abstractmethod
     async def download(self, key: str) -> bytes: ...
-
+    @abstractmethod
     async def stream(
         self, key: str, chunk_size: int = 64 * 1024
     ) -> AsyncIterator[bytes]: ...
-
+    @abstractmethod
     async def delete(self, key: str) -> None: ...
-
+    @abstractmethod
     async def exists(self, key: str) -> bool: ...
-
+    @abstractmethod
     async def get_metadata(self, key: str) -> FileMetadata: ...
-
+    @abstractmethod
     async def list_files(self, prefix: str = "") -> list[FileMetadata]: ...
-
+    @abstractmethod
     async def get_presigned_url(
         self, key: str, expires_in: int = 3600
     ) -> str: ...
-
+    @abstractmethod
     async def copy(self, source_key: str, destination_key: str) -> None: ...
