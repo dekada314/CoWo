@@ -8,21 +8,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from src.infrastucture.database.models.base import Base
+from src.infrastructure.database.models.base import Base
 
 if TYPE_CHECKING:
-    from src.infrastucture.database.models.document import Document
+    from src.infrastructure.database.models.document import Document
 
 
-class User(Base):
+class UserORM(Base):
     __tablename__ = "users"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
 
     email: Mapped[str] = mapped_column(
         String,
@@ -40,7 +33,7 @@ class User(Base):
         nullable=True,
     )
 
-    documents: Mapped[list["Document"]] = relationship(
+    documents: Mapped[list["DocumentORM"]] = relationship(
         back_populates="uploaded_by_user",
         passive_deletes=True,
     )

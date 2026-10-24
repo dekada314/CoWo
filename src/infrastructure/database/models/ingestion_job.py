@@ -4,12 +4,12 @@ from datetime import datetime
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+from src.infrastructure.database.models.base import Base
 
-from src.infrastucture.database.models.base import Base
-from src.infrastucture.database.models.enums import JobStatus, ProcessingStage
+from domain.enums import JobStatus, ProcessingStage
 
 
-class IngestionJob(Base):
+class IngestionJobORM(Base):
     __tablename__ = "ingestion_jobs"
 
     document_version_id: Mapped[uuid.UUID] = mapped_column(

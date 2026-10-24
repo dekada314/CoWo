@@ -3,12 +3,12 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+from src.infrastructure.database.models.base import Base
 
-from src.infrastucture.database.models.base import Base
-from src.infrastucture.database.models.enums import AgentRunStatus
+from domain.enums import AgentRunStatus
 
 
-class AgentRun(Base):
+class AgentRunORM(Base):
     __tablename__ = "agent_runs"
 
     thread_id: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, computed_field
+from pydantic import (
+    AmqpDsn,
+    Field,
+    PostgresDsn,
+    RedisDsn,
+    SecretStr,
+    computed_field,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -148,6 +155,38 @@ class FalkorDBSettings(BaseSettings):
         )
 
 
+class RabbitSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="RABBITMQ_",
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    host: str = "rabbitmq"
+    port: int = 5672
+    path: str = ""
+
+    default_user: str
+    default_pass: SecretStr
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return str(
+            AmqpDsn.build(
+                scheme="amqp",
+                username=self.default_user,
+                password=self.default_pass.get_secret_value()
+                if self.default_pass
+                else None,
+                host=self.host,
+                port=self.port,
+                path=self.path,
+            )
+        )
+
+
 class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="LLM_",
@@ -220,6 +259,7 @@ class Settings(BaseSettings):
     minio: MinioSettings = Field(default_factory=MinioSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     falkordb: FalkorDBSettings = Field(default_factory=FalkorDBSettings)
+    rabbit: RabbitSettings = Field(default_factory=RabbitSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
 

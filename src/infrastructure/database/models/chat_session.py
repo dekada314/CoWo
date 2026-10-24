@@ -2,11 +2,10 @@ import uuid
 
 from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
+from src.infrastructure.database.models.base import Base
 
-from src.infrastucture.database.models.base import Base
 
-
-class ChatSession(Base):
+class ChatSessionORM(Base):
     __tablename__ = "chat_sessions"
 
     user_id: Mapped[uuid.UUID] = mapped_column(

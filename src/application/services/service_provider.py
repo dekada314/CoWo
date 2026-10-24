@@ -2,10 +2,6 @@ from typing import AsyncIterable
 
 from dishka import Provider, Scope, provide
 from falkordb.asyncio import FalkorDB
-from types_aiobotocore_s3 import S3Client
-
-from src.application.interfaces.file_storage import FileStorage
-from src.application.interfaces.graph_storage import GraphStorage
 from src.application.services.file_storages.minio_storage import (
     MinioFileStorage,
 )
@@ -13,6 +9,10 @@ from src.application.services.graph_storages.falkor_storage import (
     FalkorDBStorage,
 )
 from src.core.settings import Settings
+from types_aiobotocore_s3 import S3Client
+
+from application.interfaces.storages.file_storage import FileStorage
+from application.interfaces.storages.graph_storage import GraphStorage
 
 
 class ServiceProvider(Provider):

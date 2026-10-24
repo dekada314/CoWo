@@ -5,12 +5,11 @@ import redis.asyncio as redis
 from botocore.client import Config
 from dishka import Provider, Scope, provide
 from falkordb.asyncio import FalkorDB
+from src.core.settings import Settings
 from types_aiobotocore_s3 import S3Client
 
-from src.core.settings import Settings
 
-
-class InfrastructureProvider(Provider):
+class ClientsProvider(Provider):
     def __init__(self, config: Settings, scope=None, component=None, when=None):
         super().__init__(scope, component, when)
         self._config = config

@@ -11,14 +11,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from src.infrastucture.database.models.base import Base
-from src.infrastucture.database.models.enums import ProcessingStage
+from domain.enums import ProcessingStage
+from src.infrastructure.database.models.base import Base
 
 if TYPE_CHECKING:
-    from src.infrastucture.database.models.user import User
+    from src.infrastructure.database.models.user import UserORM
 
 
-class Document(Base):
+class DocumentORM(Base):
     __tablename__ = "documents"
 
     s3_file_key: Mapped[str] = mapped_column(
@@ -54,6 +54,6 @@ class Document(Base):
         nullable=True,
     )
 
-    uploaded_by_user: Mapped[User | None] = relationship(
+    uploaded_by_user: Mapped[UserORM | None] = relationship(
         back_populates="documents",
     )

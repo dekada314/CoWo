@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from typing import AsyncIterator
 from uuid import uuid4
 
-from src.application.interfaces.file_storage import (
+from src.core.settings import MinioSettings
+
+from application.interfaces.storages.file_storage import (
     FileMetadata,
     StoredFile,
 )
-from src.core.settings import MinioSettings
 
 
 class MinioFileStorage:
