@@ -6,12 +6,13 @@ from functools import lru_cache
 from typing import Any, Iterable, Sequence
 
 from chonkie import RecursiveChunker
+from transformers import AutoTokenizer, PreTrainedTokenizerFast
+
 from src.pipelines.ingestion.chunkers.base_chunker import BaseChunker
 from src.pipelines.ingestion.parsing.strategies.parser_strategy import (
     ParsedChunk,
     ParsedPage,
 )
-from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 
 @dataclass(frozen=True, slots=True)

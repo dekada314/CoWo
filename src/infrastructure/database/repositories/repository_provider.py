@@ -19,7 +19,6 @@ from src.infrastructure.database.repositories.user_repository import (
 
 
 class RepositoryProvider(Provider):
-
     @provide(scope=Scope.REQUEST)
     def user_repository(self, session: AsyncSession) -> UserRepository:
         return UserRepository(session)
@@ -29,11 +28,15 @@ class RepositoryProvider(Provider):
         return DocumentRepository(session)
 
     @provide(scope=Scope.REQUEST)
-    def ingestion_job_repository(self, session: AsyncSession) -> IngestionJobRepository:
+    def ingestion_job_repository(
+        self, session: AsyncSession
+    ) -> IngestionJobRepository:
         return IngestionJobRepository(session)
 
     @provide(scope=Scope.REQUEST)
-    def chat_session_repository(self, session: AsyncSession) -> ChatSessionRepository:
+    def chat_session_repository(
+        self, session: AsyncSession
+    ) -> ChatSessionRepository:
         return ChatSessionRepository(session)
 
     @provide(scope=Scope.REQUEST)

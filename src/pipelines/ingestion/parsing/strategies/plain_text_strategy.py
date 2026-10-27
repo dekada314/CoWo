@@ -1,9 +1,8 @@
-from src.pipelines.ingestion.chunkers.base_chunker import BaseChunker
-
 from pipelines.ingestion.parsing.strategies.parser_strategy import (
     ParsedChunk,
     ParsedPage,
 )
+from src.pipelines.ingestion.chunkers.base_chunker import BaseChunker
 
 
 class PlainTextStrategy:
