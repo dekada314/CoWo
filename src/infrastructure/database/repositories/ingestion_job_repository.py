@@ -11,7 +11,7 @@ from src.infrastructure.database.mappers.ingestion_job_mapper import (
 from src.infrastructure.database.models.ingestion_job import IngestionJobORM
 
 
-class SQLAlchemyIngestionJobRepository:
+class IngestionJobRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
