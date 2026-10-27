@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from src.infrastructure.database.models.base import Base
 
 

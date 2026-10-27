@@ -8,7 +8,7 @@ from src.infrastructure.database.mappers.user_mapper import UserMapper
 from src.infrastructure.database.models.user import UserORM
 
 
-class SQLAlchemyUserRepository:
+class UserRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 

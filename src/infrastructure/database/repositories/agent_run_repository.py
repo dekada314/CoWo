@@ -8,7 +8,7 @@ from src.infrastructure.database.mappers.agent_run_mapper import AgentRunMapper
 from src.infrastructure.database.models.agent_run import AgentRunORM
 
 
-class SQLAlchemyAgentRunRepository:
+class AgentRunRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 

@@ -12,7 +12,7 @@ from src.infrastructure.database.models.document_version import (
 )
 
 
-class SQLAlchemyDocumentRepository:
+class DocumentRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 

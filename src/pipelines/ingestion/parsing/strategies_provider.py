@@ -1,4 +1,5 @@
 from dishka import Provider, Scope, provide
+
 from src.core.settings import Settings
 from src.pipelines.ingestion.chunkers.chunker import ChonkieChunker
 from src.pipelines.ingestion.parsing.parser_context import RAGDocumentParser

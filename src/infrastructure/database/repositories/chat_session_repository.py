@@ -10,7 +10,7 @@ from src.infrastructure.database.mappers.chat_session_mapper import (
 from src.infrastructure.database.models.chat_session import ChatSessionORM
 
 
-class SQLAlchemyChatSessionRepository:
+class ChatSessionRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
