@@ -39,7 +39,7 @@ async def analyze_document_node(document_text: str) -> KnowledgeCard:
     prompt = ChatPromptTemplate.from_template(ANALYST_PROMPT)
     chain = prompt | llm.with_structured_output(KnowledgeCard)
     
-    print("🧠 Отправляю запрос в LLM (это может занять 10-20 секунд)...")
+    print("Отправляю запрос в LLM (это может занять 10-20 секунд)...")
     
     try:
         # Вызываем нейросеть
@@ -47,7 +47,7 @@ async def analyze_document_node(document_text: str) -> KnowledgeCard:
         print("✅ Агент-аналитик: успешно сформировал KnowledgeCard!")
         return result
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"Ошибка: {e}")
         raise
 
 # 4. Тестовый запуск
