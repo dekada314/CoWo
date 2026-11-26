@@ -3,6 +3,8 @@
 *.py[oc]
 build/
 dist/
+!frontend/dist/
+!frontend/dist/**
 wheels/
 *.egg-info
 **/.DS_Store
@@ -10,6 +12,7 @@ wheels/
 # Virtual environments
 .venv
 venv/
+**/node_modules/
 .env.local
 .env
 

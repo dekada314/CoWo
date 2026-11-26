@@ -1,0 +1,32 @@
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, String, true
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.infrastructure.database.models.base import Base
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models.document import DocumentORM
+
+
+class UserORM(Base):
+    __tablename__ = "users"
+
+    email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+
+    password_hash: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=true(),
+        nullable=False,
+    )
+
+    documents: Mapped[list["DocumentORM"]] = relationship(
+        back_populates="uploader",
+        passive_deletes=True,
+    )
