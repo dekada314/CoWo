@@ -1,0 +1,25 @@
+# Opt-in test-only override. Never use it for real documents.
+services:
+  llm-stub:
+    image: cowo-app
+    command: python tests/fixtures/llm_server.py
+    networks:
+      - cowo_back_network
+  app:
+    environment:
+      LLM_BASE_URL: http://llm-stub:8080/v1
+      LLM_MODEL_ANALYST: cowo-integration-stub
+      LLM_MODEL_RESPONDER: cowo-integration-stub
+      FALKORDB_GRAPH_NAME: cowo_integration_test
+    depends_on:
+      llm-stub:
+        condition: service_started
+  worker:
+    environment:
+      LLM_BASE_URL: http://llm-stub:8080/v1
+      LLM_MODEL_ANALYST: cowo-integration-stub
+      LLM_MODEL_RESPONDER: cowo-integration-stub
+      FALKORDB_GRAPH_NAME: cowo_integration_test
+    depends_on:
+      llm-stub:
+        condition: service_started

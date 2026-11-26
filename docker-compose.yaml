@@ -1,19 +1,35 @@
 services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - cowo_back_network
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     container_name: app
     restart: unless-stopped
     env_file:
       - .env
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       falkordb:
@@ -24,33 +40,44 @@ services:
     image: postgres:18.4
     container_name: db
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
-      POSTGRES_DB: ${POSTGRES_DB:-knowledge}
+    env_file:
+      - .env
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PUBLIC_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-knowledge}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - cowo_back_network
 
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: alembic -c /app/alembic.ini upgrade head
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - cowo_back_network
+
   minio:
-    image: minio/minio:latest
+    image: docker.io/pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     container_name: minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    env_file:
+      - .env
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -61,33 +88,39 @@ services:
     networks:
       - cowo_back_network
 
-  # minio-init:
-  #   image: minio/mc:latest
-  #   container_name: kgr-minio-init
-  #   depends_on:
-  #     minio:
-  #       condition: service_healthy
-  #   entrypoint: >
-  #     /bin/sh -c "
-  #     mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin} &&
-  #     mc mb --ignore-existing local/${MINIO_BUCKET:-documents} &&
-  #     mc anonymous set download local/${MINIO_BUCKET:-documents} &&
-  #     exit 0
-  #     "
-  #   networks:
-  #     - cowo_back_network
+  minio-init:
+    image: docker.io/pgsty/silo:RELEASE.2026-11-12T00-00-00Z
+    env_file:
+      - .env
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mcli alias set local http://minio:9000 "$${MINIO_ACCESS_KEY}" "$${MINIO_SECRET_KEY}" &&
+        mcli mb --ignore-existing "local/$${MINIO_BUCKET}"
+    restart: "no"
+    networks:
+      - cowo_back_network
 
   redis:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    env_file:
+      - .env
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PUBLIC_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -99,7 +132,7 @@ services:
     container_name: falkor
     restart: unless-stopped
     ports:
-      - "${FALKORDB_PORT:-6380}:6379"
+      - "127.0.0.1:${FALKORDB_PUBLIC_PORT:-6380}:6379"
     volumes:
       - falkordb_data:/data
     healthcheck:
@@ -109,12 +142,102 @@ services:
       retries: 5
     networks:
       - cowo_back_network
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq
+    image: rabbitmq:4.0-management
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+      - rabbit_log:/var/log/rabbitmq
+      - rabbit_conf:/etc/rabbitmq/rabbitmq.conf
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: always
+    networks:
+      - cowo_back_network
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    restart: unless-stopped
+    stop_grace_period: 70s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./logs:/app/logs
+    command: >
+      taskiq worker src.infrastructure.taskiq.broker:broker src.infrastructure.taskiq.tasks
+      --workers ${INGESTION_WORKER_PROCESSES:-1}
+      --max-async-tasks ${INGESTION_WORKER_CONCURRENCY:-2}
+      --max-prefetch 0 --ack-type when_executed --wait-tasks-timeout 60
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      falkordb:
+        condition: service_healthy
+
+    networks:
+      - cowo_back_network
+
+  dispatcher:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    command: python -m src.infrastructure.taskiq.dispatcher
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cowo_back_network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    command: >
+      taskiq scheduler src.infrastructure.taskiq.scheduler:scheduler
+      src.infrastructure.taskiq.tasks --skip-first-run
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cowo_back_network
 
 
 volumes:
   postgres_data:
   minio_data:
   redis_data:
+  rabbit_data:
+  rabbit_log:
+  rabbit_conf:
   falkordb_data:
 
 networks:

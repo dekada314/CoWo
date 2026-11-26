@@ -6,6 +6,9 @@
 
 **/.DS_Store
 **/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
 **/.venv
 **/.classpath
 **/.dockerignore
@@ -34,4 +37,4 @@ LICENSE
 README.md
 cache
 logs
-.cache%              
+.cache%
