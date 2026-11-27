@@ -125,7 +125,7 @@ CoWo uses a fully local Ollama setup by default. Install a current Ollama releas
 on the host machine, then download both Qwen models before starting Compose:
 
 ```bash
-ollama pull qwen3.5:9b
+ollama pull llama3.2:3b
 ollama pull qwen3-embedding:0.6b
 ollama serve
 ```
@@ -137,11 +137,12 @@ The application configuration is:
 
 ```dotenv
 LLM_BASE_URL=http://host.docker.internal:11434/v1
-LLM_MODEL_ANALYST=qwen3.5:9b
-LLM_MODEL_RESPONDER=qwen3.5:9b
+LLM_MODEL_ANALYST=llama3.2:3b
+LLM_MODEL_RESPONDER=llama3.2:3b
 LLM_MODEL_EMBEDDING=qwen3-embedding:0.6b
 LLM_API_KEY=
 LLM_REASONING_EFFORT=none
+LLM_SEED=0
 LLM_MAX_CONCURRENCY=1
 LLM_EMBEDDING_DIMENSIONS=1024
 FALKORDB_GRAPH_NAME=knowledge_graph_qwen35

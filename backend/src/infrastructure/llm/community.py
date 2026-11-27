@@ -29,7 +29,6 @@ class CommunityNamingAgent:
         payload = {
             "model": model,
             "temperature": 0,
-            "seed": 0,
             "reasoning_effort": self.config.reasoning_effort,
             "max_tokens": min(
                 self.config.community_output_tokens, self.config.max_output_tokens
@@ -59,6 +58,8 @@ class CommunityNamingAgent:
                 },
             ],
         }
+        if self.config.seed is not None:
+            payload["seed"] = self.config.seed
         attributes = {
             "llm_model": model,
             "response_schema": CommunityDescription.__name__,

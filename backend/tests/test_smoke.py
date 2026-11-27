@@ -43,6 +43,7 @@ def test_orm_mappers_and_metadata_are_valid() -> None:
     assert models.DocumentORM.metadata is Base.metadata
     assert set(Base.metadata.tables) == {
         "agent_runs",
+        "chat_messages",
         "chat_sessions",
         "document_versions",
         "documents",

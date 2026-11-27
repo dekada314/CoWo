@@ -63,7 +63,6 @@ class ResponderAgent:
         payload = {
             "model": model,
             "temperature": 0,
-            "seed": 0,
             "reasoning_effort": self.config.reasoning_effort,
             "max_tokens": min(
                 self.config.responder_output_tokens, self.config.max_output_tokens
@@ -96,6 +95,8 @@ class ResponderAgent:
                 },
             ],
         }
+        if self.config.seed is not None:
+            payload["seed"] = self.config.seed
         attributes = {
             "llm_model": model,
             "response_schema": GeneratedAnswer.__name__,

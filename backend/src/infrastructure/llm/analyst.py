@@ -40,7 +40,6 @@ class AnalystAgent:
         payload = {
             "model": self.config.model_analyst,
             "temperature": 0,
-            "seed": 0,
             "reasoning_effort": self.config.reasoning_effort,
             "max_tokens": (
                 min(self.config.evidence_output_tokens, self.config.max_output_tokens)
@@ -69,6 +68,8 @@ class AnalystAgent:
                 },
             ],
         }
+        if self.config.seed is not None:
+            payload["seed"] = self.config.seed
         attributes = {
             "llm_model": self.config.model_analyst,
             "response_schema": schema.__name__,

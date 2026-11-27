@@ -197,9 +197,10 @@ class LLMSettings(BaseSettings):
 
     base_url: str = "http://localhost:11434/v1"
     api_key: SecretStr | None = None
-    model_analyst: str = "qwen3.5:9b"
-    model_responder: str = "qwen3.5:9b"
+    model_analyst: str = "llama3.2:3b"
+    model_responder: str = "llama3.2:3b"
     reasoning_effort: str = "none"
+    seed: int | None = None
     timeout_seconds: float = Field(default=600, gt=0)
     max_concurrency: int = Field(default=1, ge=1, le=32)
     max_output_tokens: int = Field(default=2048, ge=256)
