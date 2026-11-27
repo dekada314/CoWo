@@ -132,12 +132,12 @@ class FalkorDBSettings(BaseSettings):
     port: int = 6379
     password: SecretStr | None = None
     username: str | None = None
-    graph_name: str = "knowledge_graph"
+    graph_name: str = "knowledge_graph_qwen35"
 
     max_connections: int = 10
     socket_timeout: int = 5
 
-    embedding_dim: int = 384
+    embedding_dim: int = 1024
 
     @computed_field
     @property
@@ -197,16 +197,20 @@ class LLMSettings(BaseSettings):
 
     base_url: str = "http://localhost:11434/v1"
     api_key: SecretStr | None = None
-    model_analyst: str = ""
-    model_responder: str = ""
-    timeout_seconds: float = Field(default=120, gt=0)
-    max_concurrency: int = Field(default=2, ge=1, le=32)
-    max_output_tokens: int = Field(default=4096, ge=256)
+    model_analyst: str = "qwen3.5:9b"
+    model_responder: str = "qwen3.5:9b"
+    reasoning_effort: str = "none"
+    timeout_seconds: float = Field(default=600, gt=0)
+    max_concurrency: int = Field(default=1, ge=1, le=32)
+    max_output_tokens: int = Field(default=2048, ge=256)
+    evidence_output_tokens: int = Field(default=512, ge=256)
+    responder_output_tokens: int = Field(default=1024, ge=256)
+    community_output_tokens: int = Field(default=384, ge=128)
     input_chars: int = Field(default=12000, ge=6000, le=100000)
     max_calls_per_document: int = Field(default=128, ge=1, le=1024)
-    model_embedding: str = "intfloat/multilingual-e5-small"
-    embedding_batch_size: int = Field(default=32, ge=1, le=256)
-    embedding_dimensions: int | None = Field(default=None, ge=1)
+    model_embedding: str = "qwen3-embedding:0.6b"
+    embedding_batch_size: int = Field(default=16, ge=1, le=256)
+    embedding_dimensions: int | None = Field(default=1024, ge=1)
 
 
 class RetrievalSettings(BaseSettings):
@@ -268,9 +272,6 @@ class IngestionSettings(BaseSettings):
     job_timeout_seconds: int = Field(default=1800, ge=1)
     parse_timeout_seconds: int = Field(default=180, ge=1)
     max_text_chars: int = Field(default=500000, ge=1000)
-    dispatch_interval_seconds: float = Field(default=2, gt=0)
-    dispatch_visibility_seconds: int = Field(default=60, ge=5)
-    dispatch_batch_size: int = Field(default=20, ge=1, le=100)
     worker_concurrency: int = Field(default=2, ge=1, le=32)
     cleanup_enabled: bool = True
     cleanup_grace_hours: int = Field(default=24, ge=1)

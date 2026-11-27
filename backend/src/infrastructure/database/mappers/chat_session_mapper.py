@@ -9,6 +9,7 @@ class ChatSessionMapper:
             id=orm.id,
             user_id=orm.user_id,
             title=orm.title,
+            updated_at=orm.updated_at,
         )
 
     @staticmethod

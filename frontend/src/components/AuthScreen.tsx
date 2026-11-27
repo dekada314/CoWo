@@ -19,6 +19,16 @@ export function AuthScreen({ onAuthenticated }: Props) {
     return () => window.clearTimeout(timer);
   }, [error]);
 
+  function emailPolicyError(value: string): string | null {
+    const normalized = value.trim();
+    if (!normalized) return "Введите email";
+    if (normalized.length > 64) return "Email слишком длинный (максимум 64 символа)";
+    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(normalized)) {
+      return "Введите корректный email";
+    }
+    return null;
+  }
+
   function passwordPolicyError(value: string): string | null {
     if (value.length < 8) return "Пароль должен содержать минимум 8 символов";
     if (![...value].some((character) => character.toUpperCase() === character && character.toLowerCase() !== character)) {
@@ -32,6 +42,11 @@ export function AuthScreen({ onAuthenticated }: Props) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const emailError = emailPolicyError(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
     if (mode === "register") {
       const policyError = passwordPolicyError(password);
       if (policyError) {
@@ -118,7 +133,7 @@ export function AuthScreen({ onAuthenticated }: Props) {
             </button>
           </div>
 
-          <form onSubmit={submit} className="auth-form">
+          <form onSubmit={submit} className="auth-form" noValidate>
             <label>
               <span>Email</span>
               <input
@@ -127,6 +142,7 @@ export function AuthScreen({ onAuthenticated }: Props) {
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
+                aria-invalid={Boolean(error) && Boolean(emailPolicyError(email))}
                 required
               />
             </label>

@@ -151,6 +151,6 @@ class KnowledgeGraphService:
     def _is_uuid(value: str) -> bool:
         try:
             UUID(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return False
         return True

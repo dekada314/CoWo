@@ -121,36 +121,60 @@ The ingestion agent pipeline is:
    propagation to `Concept`/`RELATED_TO`, names the resulting clusters and updates
    active generated communities.
 
-Set these values in `.env` before submitting documents:
+CoWo uses a fully local Ollama setup by default. Install a current Ollama release
+on the host machine, then download both Qwen models before starting Compose:
+
+```bash
+ollama pull qwen3.5:9b
+ollama pull qwen3-embedding:0.6b
+ollama serve
+```
+
+On a 16 GB machine keep the chat model at 9B quantized, use one concurrent model
+request and a 16K context window. If Ollama is managed as a service, set
+`OLLAMA_CONTEXT_LENGTH=16384` in that service's environment before restarting it.
+The application configuration is:
 
 ```dotenv
 LLM_BASE_URL=http://host.docker.internal:11434/v1
-LLM_MODEL_ANALYST=your-installed-model-name
-LLM_MODEL_RESPONDER=
-LLM_MODEL_EMBEDDING=intfloat/multilingual-e5-small
+LLM_MODEL_ANALYST=qwen3.5:9b
+LLM_MODEL_RESPONDER=qwen3.5:9b
+LLM_MODEL_EMBEDDING=qwen3-embedding:0.6b
 LLM_API_KEY=
+LLM_REASONING_EFFORT=none
+LLM_MAX_CONCURRENCY=1
+LLM_EMBEDDING_DIMENSIONS=1024
+FALKORDB_GRAPH_NAME=knowledge_graph_qwen35
+FALKORDB_EMBEDDING_DIM=1024
 ```
 
-For a temporary OpenAI-backed run, use `https://api.openai.com/v1`, a chat model,
-`text-embedding-3-small`, and set `LLM_EMBEDDING_DIMENSIONS=384`. Use a separate
-`FALKORDB_GRAPH_NAME` when switching embedding providers so vectors from different
-models are never compared in the same semantic space.
+The backend uses Ollama's OpenAI-compatible `/v1/chat/completions` and
+`/v1/embeddings` endpoints. Thinking is disabled for deterministic structured
+JSON. Query embeddings receive Qwen's retrieval instruction while document
+embeddings remain unprefixed. `host.docker.internal` lets the containers reach
+Ollama running on the host; `localhost` inside a worker would point to the worker
+container itself. No document text or prompt is sent to an external model API.
 
-Google AI Studio keys work through the Gemini OpenAI-compatible endpoint at
-`https://generativelanguage.googleapis.com/v1beta/openai`. A text-only setup can
-use `gemini-2.5-flash` and `gemini-embedding-001` with a 3072-dimensional FalkorDB
-index. Keep a separate graph name for this embedding space as well.
+The fast local profile uses `LLM_REASONING_EFFORT=none` in all three agents.
+Ollama maps this to disabled thinking for models supporting that mode
+([Ollama API documentation](https://docs.ollama.com/api/openai-compatibility)).
+Generation budgets are separate: `LLM_EVIDENCE_OUTPUT_TOKENS=512` for intermediate
+summaries, `LLM_MAX_OUTPUT_TOKENS=2048` for the final card,
+`LLM_RESPONDER_OUTPUT_TOKENS=1024` for answers and
+`LLM_COMMUNITY_OUTPUT_TOKENS=384` for community names/descriptions. These are
+token ceilings, not targets. Prompts request short results; validation still
+rejects incomplete JSON. The 600-second request timeout is a failure limit,
+not a thinking budget. Real latency depends on hardware and source length.
 
-Use the actual port and model name of your local OpenAI-compatible server.
-The endpoint must accept `POST /v1/chat/completions`, `POST /v1/embeddings`,
-JSON-object chat responses and the standard OpenAI-compatible parameters. The
-embedding endpoint must serve the model named by `LLM_MODEL_EMBEDDING`; the default
-`multilingual-e5-small` configuration uses 384-dimensional vectors. The local
-server must accept connections from Docker; `localhost` inside a worker means the
-worker itself. `host.docker.internal` is configured for Docker Desktop and Linux.
-Document ingestion returns 503 until the analyst and embedding model names are
-set. `LLM_MODEL_RESPONDER` is optional and falls back to `LLM_MODEL_ANALYST`. No
-external/cloud model is selected.
+Use an up-to-date Ollama on the target PC. Configure its service with
+`OLLAMA_NUM_PARALLEL=1` and `OLLAMA_CONTEXT_LENGTH=16384` to bound concurrent
+inference and context memory across API and worker processes. These variables
+belong to the Ollama service, not CoWo's `.env`.
+
+The Qwen embedding model produces 1024-dimensional vectors. The dedicated graph
+name prevents them from being mixed with vectors produced by an older provider.
+Existing documents from another embedding space must be processed again before
+they appear in the Qwen graph and retrieval results.
 
 Start/recreate services after changing `.env`:
 
@@ -214,7 +238,10 @@ user's card, citation or original document.
 
 The visual graph exposes only domains and concepts. Communities are returned as
 grouping metadata and rendered as background regions, not clickable graph nodes.
-Hovering or selecting a concept loads its owned PostgreSQL cards on demand.
+Selecting a concept loads its owned PostgreSQL cards on demand.
+The graph uses small circular nodes, thin edges and a force-based layout.
+Drag nodes or the background, zoom around the pointer, search by node name,
+and toggle labels. Selected-node details appear in a separate side panel.
 
 ```text
 GET /api/v1/graph
@@ -239,23 +266,20 @@ concepts are shared in FalkorDB, while PostgreSQL ownership is the tenant bounda
 
 ### Delivery and scaling
 
-The document version and job are committed together. The job row also serves as
-a durable outbox: a separate dispatcher polls with `FOR UPDATE SKIP LOCKED` and
-publishes only the job ID to a dedicated durable RabbitMQ queue. The API
-does not need a live broker to accept an upload. A failed/ambiguous publish is
-retried after the dispatch visibility interval. The queue has a maximum length
-and message TTL to bound repeated deliveries while workers are unavailable;
-PostgreSQL remains the source of truth and reissues unclaimed work.
+The document version and job are committed together, then the API immediately
+publishes the job ID to the dedicated durable RabbitMQ queue. The API requires a
+live broker to accept new work. If publishing fails, the job is marked `failed`
+and can be started again from the UI after RabbitMQ becomes available.
 
 Workers use short database transactions, atomic claims, lease tokens and
 heartbeats. Only the current lease holder can project and commit a card. Graph
 writes use stable identifiers and `MERGE`, so repeated delivery updates the same
 projection. The PostgreSQL card and completed job status are committed in one
-transaction. A crashed
-worker's lease expires and the dispatcher reissues the job. After the attempt
-limit the job becomes `failed`. Transient LLM errors (timeouts, 429, 5xx, malformed
-structured output) use bounded exponential backoff; permanent document errors
-and 4xx configuration errors fail without automatic retries.
+transaction. A crashed worker leaves its RabbitMQ message unacknowledged, so the
+broker can redeliver it. After the attempt limit the job becomes `failed`.
+Transient LLM errors (timeouts, 429, 5xx, malformed structured output) use
+bounded exponential backoff inside the active Taskiq task; permanent document
+errors and 4xx configuration errors fail without automatic retries.
 
 Delivery is **at least once**, not exactly once: a crash after the model response
 but before the DB commit may repeat an LLM request. Card storage is idempotent.
@@ -281,13 +305,13 @@ docker compose up -d --scale worker=3
 
 `INGESTION_WORKER_PROCESSES` defaults to 1 per container;
 `INGESTION_WORKER_CONCURRENCY` defaults to 2 documents per process.
-`LLM_MAX_CONCURRENCY` bounds model requests **per process**, so 3 replicas with
-1 process and a limit of 2 can make up to 6 model requests simultaneously.
-Size this to your local model server's capacity; more workers cannot add GPU
-capacity. Prefetch is bounded and messages are acknowledged after execution.
-Dispatcher replicas can also be scaled; leases and claims are shared through DB.
-Changing queue TTL/capacity requires a new `INGESTION_QUEUE_NAME`, because RabbitMQ
-queue arguments are immutable. High availability also needs replicated RabbitMQ,
+`LLM_MAX_CONCURRENCY` bounds model requests **per process** and defaults to 1 for
+the local 9B model. Do not scale workers above 1 on a single 16 GB model host:
+more workers cannot add GPU capacity and only increase memory pressure. Prefetch
+is bounded and messages are acknowledged after execution.
+Leases and claims remain in PostgreSQL to fence duplicate deliveries. Changing
+queue capacity requires a new `INGESTION_QUEUE_NAME`, because RabbitMQ queue
+arguments are immutable. High availability also needs replicated RabbitMQ,
 PostgreSQL and S3; this Compose configuration is a single-machine development setup.
 
 ### Tests

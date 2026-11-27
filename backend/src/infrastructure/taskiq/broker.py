@@ -13,7 +13,6 @@ broker = AioPikaBroker(
             arguments={
                 "x-max-length": settings.ingestion.queue_max_messages,
                 "x-overflow": "reject-publish",
-                "x-message-ttl": settings.ingestion.dispatch_visibility_seconds * 2000,
             },
         )
     ],

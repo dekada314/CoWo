@@ -40,7 +40,12 @@ class AnalystAgent:
         payload = {
             "model": self.config.model_analyst,
             "temperature": 0,
-            "max_tokens": self.config.max_output_tokens,
+            "seed": 0,
+            "reasoning_effort": self.config.reasoning_effort,
+            "max_tokens": (
+                min(self.config.evidence_output_tokens, self.config.max_output_tokens)
+                if schema is Evidence else self.config.max_output_tokens
+            ),
             "response_format": {"type": "json_object"},
             "messages": [
                 {
@@ -133,7 +138,7 @@ class AnalystAgent:
                 retryable=True,
             )
             raise IngestionError("llm_unavailable", retryable=True) from exc
-        except ValueError, KeyError, IndexError, TypeError, ValidationError:
+        except (ValueError, KeyError, IndexError, TypeError, ValidationError):
             logger.error(
                 "llm_response_invalid",
                 **attributes,
@@ -177,7 +182,9 @@ class AnalystAgent:
                             part,
                             Evidence,
                             "Summarize the evidence in Russian and name only its broad "
-                            "core themes. Merge synonyms and closely related details.",
+                            "core themes. Use 2-3 short sentences and at most "
+                            "5 themes. "
+                            "Merge synonyms and closely related details.",
                         )
                     )
                     for part in parts
@@ -190,7 +197,9 @@ class AnalystAgent:
             parts[0],
             KnowledgeCard,
             "Create a Russian knowledge card as a concise digest of the whole "
-            "document. Select one broad domain and give it a specific one-sentence "
+            "document. Use 2-3 short sentences for the summary, 3-5 brief key points, "
+            "and short descriptions (one sentence each). Do not explain your process. "
+            "Select one broad domain and give it a specific one-sentence "
             "description. Extract no more than 8 high-level concepts, preferably "
             "4-7 for a substantial document. A concept must represent a major theme, "
             "not a person, UI element, implementation detail, workflow step, role, "

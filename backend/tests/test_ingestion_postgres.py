@@ -2,19 +2,17 @@
 
 import asyncio
 import os
-from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.application.ingestion.contracts import IngestionError, KnowledgeCard, LeaseLost
 from src.core.settings import IngestionSettings, get_settings
 from src.domain.enums import JobStatus
-from src.infrastructure.database.models.ingestion_job import IngestionJobORM as Job
 from src.infrastructure.database.models.knowledge_card import KnowledgeCardORM
 from src.infrastructure.database.models.user import UserORM
 from src.infrastructure.database.repositories.ingestion_store import IngestionStore
@@ -86,26 +84,13 @@ def test_migrations_delivery_claims_recovery_and_atomic_card():
             assert documents[0].id == job.id
             assert documents[0].filename == "test.txt"
             assert await store.list_documents(other_user_id) == []
-            batches = await asyncio.gather(store.deliveries(), store.deliveries())
-            assert sum(job.id in batch for batch in batches) == 1
-
             claims = await asyncio.gather(store.claim(job.id), store.claim(job.id))
             assert sum(claim is not None for claim in claims) == 1
             stale = next(claim for claim in claims if claim)
             assert await store.heartbeat(stale)
-            assert await store.deliveries() == []
-            async with sessions.begin() as session:
-                await session.execute(
-                    update(Job)
-                    .where(Job.id == job.id)
-                    .values(
-                        lease_expires_at=func.now() - timedelta(seconds=1),
-                        next_dispatch_at=func.now() - timedelta(seconds=1),
-                    )
-                )
-            assert await store.deliveries() == [job.id]
+            # A redelivered RabbitMQ message fences the previous lease immediately.
             recovered = await store.claim(job.id)
-            assert recovered and recovered.attempt == 2
+            assert recovered and recovered.attempt == 1
             assert recovered.token != stale.token
             assert not await store.heartbeat(stale)
 
@@ -147,22 +132,29 @@ def test_migrations_delivery_claims_recovery_and_atomic_card():
 
             retry_job = await store.submit("retry.txt", "key2", "b" * 64, 6, user_id)
             first = await store.claim(retry_job.id)
-            await store.fail(first, IngestionError("llm_unavailable", retryable=True))
+            first_delay = await store.fail(
+                first, IngestionError("llm_unavailable", retryable=True)
+            )
+            assert first_delay == settings.retry_base_seconds
             assert (await store.get(retry_job.id)).status == JobStatus.QUEUED
-            assert await store.claim(retry_job.id) is None
-            async with sessions.begin() as session:
-                await session.execute(
-                    update(Job)
-                    .where(Job.id == retry_job.id)
-                    .values(next_attempt_at=func.now() - timedelta(seconds=1))
-                )
             second = await store.claim(retry_job.id)
-            await store.fail(second, IngestionError("llm_unavailable", retryable=True))
+            second_delay = await store.fail(
+                second, IngestionError("llm_unavailable", retryable=True)
+            )
+            assert second_delay is None
             assert (await store.get(retry_job.id)).status == JobStatus.FAILED
             assert await store.retry(retry_job.id, other_user_id) is None
             assert (await store.retry(retry_job.id, user_id)).attempt == 0
             with pytest.raises(IngestionError):
                 await store.retry(retry_job.id)
+
+            publish_failed = await store.submit(
+                "queue.txt", "key3", "c" * 64, 6, user_id
+            )
+            await store.mark_publish_failed(publish_failed.id)
+            failed_view = await store.get(publish_failed.id)
+            assert failed_view.status == JobStatus.FAILED
+            assert failed_view.error_message == "queue_publish_failed"
         finally:
             await engine.dispose()
             async with admin.begin() as conn:

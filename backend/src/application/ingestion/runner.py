@@ -69,10 +69,10 @@ class IngestionRunner:
             await self.store.stage(claim, ProcessingStage.GRAPH_INDEXING)
             await self.store.complete(claim, card)
 
-    async def run(self, job_id: UUID) -> None:
+    async def run(self, job_id: UUID) -> float | None:
         claim = await self.store.claim(job_id)
         if claim is None:
-            return
+            return None
         job_logger = logger.bind(
             job_id=str(job_id),
             attempt=claim.attempt,
@@ -102,7 +102,7 @@ class IngestionRunner:
                 retryable=error.retryable,
             )
             try:
-                await self.store.fail(claim, error)
+                return await self.store.fail(claim, error)
             except Exception:
                 job_logger.exception(
                     "ingestion_failure_persist_failed",
@@ -113,3 +113,4 @@ class IngestionRunner:
             work.cancel()
             heartbeat.cancel()
             await asyncio.gather(work, heartbeat, return_exceptions=True)
+        return None

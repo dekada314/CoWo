@@ -9,15 +9,16 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if self.path.endswith("/embeddings"):
             inputs = body["input"]
+            dimensions = body.get("dimensions", 1024)
             vectors = []
             for value in inputs:
                 lowered = value.casefold()
                 if "chunk" in lowered:
-                    vector = [1.0, 0.0, *([0.0] * 382)]
+                    vector = [1.0, 0.0, *([0.0] * (dimensions - 2))]
                 elif "context" in lowered:
-                    vector = [0.8, 0.6, *([0.0] * 382)]
+                    vector = [0.8, 0.6, *([0.0] * (dimensions - 2))]
                 else:
-                    vector = [0.0, 1.0, *([0.0] * 382)]
+                    vector = [0.0, 1.0, *([0.0] * (dimensions - 2))]
                 vectors.append(vector)
             data = []
             for index, vector in enumerate(vectors):

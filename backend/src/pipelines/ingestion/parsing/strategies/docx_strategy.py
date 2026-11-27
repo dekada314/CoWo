@@ -34,7 +34,7 @@ class DocxStrategy:
                     continue
                 try:
                     style_name = (block.style.name or "").casefold()
-                except AttributeError, KeyError:
+                except (AttributeError, KeyError):
                     style_name = ""
                 if style_name.startswith(("heading", "заголовок")):
                     if current_heading or current_paragraphs:

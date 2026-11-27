@@ -60,6 +60,9 @@ def test_analyst_maps_all_fragments_and_bounds_concurrency():
         for i in range(5):
             assert any(f"part-{i}:" in r["messages"][1]["content"] for r in seen)
         assert all(r["model"] == "local-test" for r in seen)
+        assert all(r["reasoning_effort"] == "none" for r in seen)
+        assert all(r["max_tokens"] == 512 for r in seen[:-1])
+        assert seen[-1]["max_tokens"] == 2048
         assert "source_content" in seen[0]["messages"][1]["content"]
 
     asyncio.run(scenario())

@@ -33,6 +33,16 @@ class OpenAIEmbeddingClient:
             return {"Authorization": f"Bearer {self.config.api_key.get_secret_value()}"}
         return {}
 
+    def _prepare_input(self, text: str, input_type: str) -> str:
+        if self.config.model_embedding.casefold().startswith("qwen3-embedding"):
+            if input_type == "query":
+                return (
+                    "Instruct: Given a user question, retrieve the most relevant "
+                    "knowledge from the document collection.\nQuery: " + text
+                )
+            return text
+        return f"{input_type}: {text}"
+
     async def _embed_batch(
         self, texts: list[str], input_type: str
     ) -> list[list[float]]:
@@ -48,7 +58,9 @@ class OpenAIEmbeddingClient:
             async with self.slots:
                 payload = {
                     "model": self.config.model_embedding,
-                    "input": [f"{input_type}: {text}" for text in texts],
+                    "input": [
+                        self._prepare_input(text, input_type) for text in texts
+                    ],
                 }
                 if self.config.embedding_dimensions is not None:
                     payload["dimensions"] = self.config.embedding_dimensions
@@ -105,7 +117,7 @@ class OpenAIEmbeddingClient:
                 retryable=True,
             )
             raise IngestionError("embedding_unavailable", retryable=True) from exc
-        except KeyError, TypeError, ValueError:
+        except (KeyError, TypeError, ValueError):
             logger.error(
                 "embedding_response_invalid",
                 **attributes,

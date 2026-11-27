@@ -14,6 +14,7 @@ Answer = Annotated[
 class AnswerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     question: Question
+    session_id: UUID | None = None
 
 
 class GeneratedAnswer(BaseModel):
@@ -38,9 +39,24 @@ class EvidencePath(BaseModel):
 
 
 class AnswerResponse(BaseModel):
+    session_id: UUID | None = None
     answer: str
     citations: list[Citation]
     evidence_paths: list[EvidencePath]
+
+
+class ChatMessageResponse(BaseModel):
+    id: UUID
+    role: str
+    content: str
+    created_at: str
+
+
+class ChatSessionResponse(BaseModel):
+    id: UUID
+    title: str | None
+    updated_at: str
+    messages: list[ChatMessageResponse]
 
 
 class KnowledgeNotFound(Exception):

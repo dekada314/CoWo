@@ -13,9 +13,9 @@ class Email:
         if not normalized:
             raise ValueError("Введите Email")
         if len(normalized) > 64:
-            raise ValueError("Email слишком длинный (макимум 64 символов)")
+            raise ValueError("Email слишком длинный (максимум 64 символа)")
         if not EMAIL_PATTERN.match(normalized):
-            raise ValueError("Неверный формат")
+            raise ValueError("Введите корректный email")
         object.__setattr__(self, "value", normalized)
 
     def __str__(self) -> str:

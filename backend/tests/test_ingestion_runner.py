@@ -21,7 +21,7 @@ def test_duplicate_delivery_does_not_execute_pipeline():
     async def scenario():
         store, pipeline, projector = AsyncMock(), AsyncMock(), AsyncMock()
         store.claim.return_value = None
-        await IngestionRunner(
+        retry_delay = await IngestionRunner(
             store,
             Storage(),
             pipeline,
@@ -32,6 +32,7 @@ def test_duplicate_delivery_does_not_execute_pipeline():
         pipeline.run.assert_not_called()
         projector.project.assert_not_called()
         store.complete.assert_not_called()
+        assert retry_delay is None
 
     asyncio.run(scenario())
 
@@ -53,8 +54,9 @@ def test_pipeline_failure_records_safe_retryable_error():
         store, pipeline, projector = AsyncMock(), AsyncMock(), AsyncMock()
         claim = make_claim()
         store.claim.return_value = claim
+        store.fail.return_value = 30
         pipeline.run.side_effect = IngestionError("llm_unavailable", retryable=True)
-        await IngestionRunner(
+        retry_delay = await IngestionRunner(
             store,
             Storage(),
             pipeline,
@@ -67,6 +69,7 @@ def test_pipeline_failure_records_safe_retryable_error():
         error = store.fail.call_args.args[1]
         assert error.retryable
         assert str(error) == "llm_unavailable"
+        assert retry_delay == 30
 
     asyncio.run(scenario())
 

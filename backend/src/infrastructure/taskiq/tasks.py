@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID, uuid4
 
 from taskiq import Context, TaskiqDepends, TaskiqEvents, TaskiqState
@@ -26,7 +27,11 @@ async def ingestion(job_id: str, context: Context = TaskiqDepends()) -> None:
     parsed_job_id = UUID(job_id)
     context_tokens = start_log_context(trace_id=str(parsed_job_id))
     try:
-        await context.state.services.runner.run(parsed_job_id)
+        while True:
+            retry_delay = await context.state.services.runner.run(parsed_job_id)
+            if retry_delay is None:
+                break
+            await asyncio.sleep(retry_delay)
     finally:
         reset_log_context(context_tokens)
 

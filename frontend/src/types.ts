@@ -101,7 +101,22 @@ export type EvidencePath = {
 };
 
 export type Answer = {
+  session_id?: string;
   answer: string;
   citations: Citation[];
   evidence_paths: EvidencePath[];
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+};
+
+export type ChatSession = {
+  id: string;
+  title: string | null;
+  updated_at: string;
+  messages: ChatMessage[];
 };

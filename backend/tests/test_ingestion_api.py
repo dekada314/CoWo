@@ -13,6 +13,7 @@ from src.core.settings import get_settings
 from src.domain.entities.user import User
 from src.domain.value_objects.email import Email
 from src.infrastructure.database.repositories.ingestion_store import IngestionStore
+from src.presentation.api.v1 import ingestion_routes
 from src.presentation.api.v1.ingestion_routes import router
 
 
@@ -42,6 +43,8 @@ def test_upload_accepts_durable_job_and_validates_input(monkeypatch):
         )
         user = User(uuid4(), Email("user@example.com"), True)
         auth.authenticate_access.return_value = user
+        publish = AsyncMock()
+        monkeypatch.setattr(ingestion_routes, "publish_ingestion", publish)
         store.submit.return_value = JobView(
             id=uuid4(),
             document_version_id=uuid4(),
@@ -80,6 +83,7 @@ def test_upload_accepts_durable_job_and_validates_input(monkeypatch):
             storage.upload_file.assert_awaited_once()
             store.submit.assert_awaited_once()
             assert store.submit.await_args.args[-1] == user.id
+            publish.assert_awaited_once_with(store.submit.return_value.id)
 
             documents = await client.get("/api/v1/ingestion/documents")
             assert documents.status_code == 200

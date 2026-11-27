@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
+import { humanizeErrorCode } from "../lib/api";
 import type { StoredJob } from "../types";
 
 type Props = {
@@ -80,7 +81,7 @@ export function JobsTable({
                   <span>Попытка {job.attempt}</span>
                   {job.stage && <span>{stageLabels[job.stage] ?? job.stage}</span>}
                 </div>
-                {job.error_message && <small className="job-error">{job.error_message}</small>}
+                {job.error_message && <small className="job-error">{humanizeErrorCode(job.error_message)}</small>}
               </div>
               <span className={`status status--${job.status}`}>
                 <i /> {statusLabels[job.status]}

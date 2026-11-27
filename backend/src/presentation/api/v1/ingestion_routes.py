@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 from pathlib import PurePath
 from typing import Annotated
@@ -31,10 +32,16 @@ from src.application.interfaces.storages.file_storage import FileStorage
 from src.core.settings import get_settings
 from src.domain.entities.user import User
 from src.infrastructure.database.repositories.ingestion_store import IngestionStore
+from src.infrastructure.taskiq.tasks import ingestion
 from src.presentation.api.dependencies.auth import require_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+async def publish_ingestion(job_id: UUID) -> None:
+    async with asyncio.timeout(10):
+        await ingestion.kiq(str(job_id))
 
 
 def validate_filename(filename: str) -> str:
@@ -116,6 +123,15 @@ async def submit_document(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="ingestion_submission_unavailable",
+        ) from exc
+    try:
+        await publish_ingestion(job.id)
+    except Exception as exc:
+        await store.mark_publish_failed(job.id)
+        logger.exception("ingestion_publish_failed", job_id=str(job.id))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="queue_publish_failed",
         ) from exc
     logger.info(
         "ingestion_submitted",
@@ -259,6 +275,15 @@ async def retry_job(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found"
         )
+    try:
+        await publish_ingestion(job.id)
+    except Exception as exc:
+        await store.mark_publish_failed(job.id)
+        logger.exception("ingestion_retry_publish_failed", job_id=str(job.id))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="queue_publish_failed",
+        ) from exc
     logger.info(
         "ingestion_retry_scheduled",
         job_id=str(job.id),

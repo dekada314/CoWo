@@ -34,6 +34,7 @@ from src.infrastructure.database.database_provider import DBConnectionProvider
 from src.infrastructure.database.repositories.repository_provider import (
     RepositoryProvider,
 )
+from src.infrastructure.taskiq.broker import broker
 from src.presentation.api.v1.auth_routes import router as auth_router
 from src.presentation.api.v1.graph_routes import router as graph_router
 from src.presentation.api.v1.health_routes import router as health_router
@@ -58,10 +59,17 @@ container = make_async_container(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
+    broker_started = False
     try:
+        await broker.startup()
+        broker_started = True
         yield
     finally:
-        await container.close()
+        try:
+            if broker_started:
+                await broker.shutdown()
+        finally:
+            await container.close()
 
 
 app = FastAPI(

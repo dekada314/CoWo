@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 
@@ -7,6 +8,7 @@ class ChatSession:
     id: UUID
     user_id: UUID
     title: str | None = None
+    updated_at: datetime | None = None
 
     def rename(self, new_title: str) -> None:
         if not new_title.strip():

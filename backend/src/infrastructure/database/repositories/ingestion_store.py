@@ -73,58 +73,17 @@ class IngestionStore:
             result = JobView.model_validate(job)
         return result
 
-    @staticmethod
-    def _expired():
-        return and_(
-            Job.status == JobStatus.RUNNING,
-            or_(Job.lease_expires_at <= func.now(), Job.lease_expires_at.is_(None)),
-        )
-
     def _eligible(self):
         return and_(
             Job.pipeline_version == self.config.pipeline_version,
-            Job.attempt < self.config.max_attempts,
             or_(
-                and_(Job.status == JobStatus.QUEUED, Job.next_attempt_at <= func.now()),
-                self._expired(),
+                and_(
+                    Job.status == JobStatus.QUEUED,
+                    Job.attempt < self.config.max_attempts,
+                ),
+                Job.status == JobStatus.RUNNING,
             ),
         )
-
-    async def deliveries(self) -> list[UUID]:
-        async with self.sessions.begin() as session:
-            await session.execute(
-                update(Job)
-                .where(
-                    self._expired(),
-                    Job.attempt >= self.config.max_attempts,
-                    Job.pipeline_version == self.config.pipeline_version,
-                )
-                .values(
-                    status=JobStatus.FAILED,
-                    finished_at=func.now(),
-                    lease_token=None,
-                    lease_expires_at=None,
-                    error_message="worker_lost_attempts_exhausted",
-                )
-            )
-            jobs = (
-                await session.scalars(
-                    select(Job)
-                    .where(
-                        self._eligible(),
-                        Job.next_dispatch_at <= func.now(),
-                    )
-                    .order_by(Job.next_dispatch_at, Job.id)
-                    .limit(self.config.dispatch_batch_size)
-                    .with_for_update(skip_locked=True)
-                )
-            ).all()
-            ids = [job.id for job in jobs]
-            for job in jobs:
-                job.next_dispatch_at = func.now() + timedelta(
-                    seconds=self.config.dispatch_visibility_seconds
-                )
-        return ids
 
     async def claim(self, job_id: UUID) -> ClaimedJob | None:
         async with self.sessions.begin() as session:
@@ -148,8 +107,10 @@ class IngestionStore:
                 return None
             job, version, filename = row
             token = uuid4()
+            was_queued = job.status == JobStatus.QUEUED
             job.status = JobStatus.RUNNING
-            job.attempt += 1
+            if was_queued:
+                job.attempt += 1
             job.lease_token = token
             job.lease_expires_at = func.now() + timedelta(
                 seconds=self.config.lease_seconds
@@ -228,11 +189,13 @@ class IngestionStore:
                 )
             )
 
-    async def fail(self, claim: ClaimedJob, error: IngestionError) -> None:
+    async def fail(
+        self, claim: ClaimedJob, error: IngestionError
+    ) -> float | None:
         retry = error.retryable and claim.attempt < self.config.max_attempts
         delay = min(self.config.retry_base_seconds * 2 ** (claim.attempt - 1), 900)
         async with self.sessions.begin() as session:
-            await session.execute(
+            changed = await session.scalar(
                 update(Job)
                 .where(self._owned(claim))
                 .values(
@@ -242,8 +205,25 @@ class IngestionStore:
                     lease_token=None,
                     lease_expires_at=None,
                     finished_at=None if retry else func.now(),
-                    next_attempt_at=func.now() + timedelta(seconds=delay),
-                    next_dispatch_at=func.now() + timedelta(seconds=delay),
+                )
+                .returning(Job.id)
+            )
+        return float(delay) if changed is not None and retry else None
+
+    async def mark_publish_failed(
+        self, job_id: UUID, error_code: str = "queue_publish_failed"
+    ) -> None:
+        async with self.sessions.begin() as session:
+            await session.execute(
+                update(Job)
+                .where(Job.id == job_id, Job.status == JobStatus.QUEUED)
+                .values(
+                    status=JobStatus.FAILED,
+                    error_message=error_code,
+                    error_details={"retryable": True},
+                    finished_at=func.now(),
+                    lease_token=None,
+                    lease_expires_at=None,
                 )
             )
 
@@ -457,8 +437,6 @@ class IngestionStore:
             job.status = JobStatus.QUEUED
             job.attempt = 0
             job.stage = ProcessingStage.UPLOADED
-            job.next_attempt_at = func.now()
-            job.next_dispatch_at = func.now()
             job.error_message = None
             job.error_details = None
             job.finished_at = None

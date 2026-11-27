@@ -4,6 +4,7 @@ import type {
   Job,
   KnowledgeGraph,
   KnowledgeCard,
+  ChatSession,
   StoredJob,
   User,
 } from "../types";
@@ -39,16 +40,58 @@ const errorMessages: Record<string, string> = {
   knowledge_not_found: "В базе знаний пока нет подходящего ответа",
   document_processing_in_progress: "Дождитесь завершения обработки документа",
   document_deletion_failed: "Не удалось полностью удалить документ. Повторите попытку",
+  ingestion_submission_unavailable: "Не удалось сохранить задание. Повторите попытку",
+  queue_publish_failed: "Не удалось поставить документ в очередь. Проверьте RabbitMQ и повторите обработку",
+  job_not_found: "Документ или задание не найдено",
+  card_not_ready: "Карточка ещё не готова. Дождитесь завершения обработки",
+  only_failed_jobs_can_be_retried: "Повторно запустить можно только задание с ошибкой",
+  document_integrity_check_failed: "Исходный файл повреждён или был изменён",
+  worker_lost_attempts_exhausted: "Обработчик прервался. Лимит попыток исчерпан",
+  job_lease_lost: "Обработка была передана другому воркеру",
+  job_timeout: "Обработка документа заняла слишком много времени",
+  ingestion_internal_error: "Внутренняя ошибка обработки документа",
+  llm_unavailable: "Языковая модель временно недоступна",
+  llm_invalid_structured_output: "Модель вернула некорректный результат",
+  llm_output_truncated: "Ответ модели оказался неполным",
+  document_analysis_budget_exceeded: "Документ слишком большой для доступного лимита анализа",
+  analysis_fragment_too_large: "Фрагмент документа слишком большой для анализа",
+  embedding_unavailable: "Модель векторизации временно недоступна",
+  embedding_invalid_response: "Модель векторизации вернула некорректный результат",
+  concept_not_found: "Концепция не найдена",
+  graph_unavailable: "Граф знаний временно недоступен",
+  retrieval_unavailable: "Поиск по базе знаний временно недоступен",
+  responder_invalid_sources: "Не удалось проверить источники ответа",
+  responder_invalid_output: "Модель вернула некорректный ответ",
+  chat_not_found: "Диалог не найден",
+  request_failed: "Не удалось выполнить запрос. Повторите попытку",
+  invalid_email_format: "Введите корректный email",
+  required_field_missing: "Заполните обязательные поля",
+  validation_failed: "Проверьте правильность заполнения полей",
 };
+
+export function humanizeErrorCode(detail: string, status = 0): string {
+  const exact = errorMessages[detail];
+  if (exact) return exact;
+  if (/[А-Яа-яЁё]/.test(detail)) return detail;
+  if (/^llm_http_/.test(detail)) return "Ошибка при обращении к языковой модели";
+  if (/^embedding_http_/.test(detail)) return "Ошибка при обращении к модели векторизации";
+  if (/^community_http_/.test(detail)) return "Ошибка при построении тематических групп";
+  if (status === 401) return "Сессия завершена. Войдите снова";
+  if (status === 403) return "Недостаточно прав для выполнения действия";
+  if (status === 404) return "Запрошенные данные не найдены";
+  if (status === 409) return "Действие недоступно в текущем состоянии";
+  if (status >= 500) return "Сервис временно недоступен. Повторите попытку позже";
+  return "Не удалось выполнить запрос. Повторите попытку";
+}
 
 export function humanizeError(error: unknown): string {
   if (error instanceof ApiError) {
-    return errorMessages[error.detail] ?? error.detail.replaceAll("_", " ");
+    return humanizeErrorCode(error.detail, error.status);
   }
   if (error instanceof Error) {
-    return error.message;
+    return "Не удалось связаться с сервером. Проверьте подключение и повторите попытку";
   }
-  return "Что-то пошло не так";
+  return "Не удалось выполнить запрос. Повторите попытку";
 }
 
 function setToken(token: string | null) {
@@ -63,15 +106,23 @@ async function parseError(response: Response): Promise<ApiError> {
     }
     if (Array.isArray(payload.detail)) {
       const validation = payload.detail.find(
-        (item): item is { msg: string } =>
+        (item): item is { msg: string; type?: string; loc?: Array<string | number> } =>
           typeof item === "object" && item !== null && "msg" in item
           && typeof item.msg === "string",
       );
       if (validation) {
-        return new ApiError(
-          response.status,
-          validation.msg.replace(/^Value error,\s*/, ""),
-        );
+        const location = validation.loc?.map(String) ?? [];
+        if (location.includes("email") || /email address/i.test(validation.msg)) {
+          return new ApiError(response.status, "invalid_email_format");
+        }
+        if (validation.type === "missing") {
+          return new ApiError(response.status, "required_field_missing");
+        }
+        const message = validation.msg.replace(/^Value error,\s*/, "");
+        if (/[А-Яа-яЁё]/.test(message)) {
+          return new ApiError(response.status, message);
+        }
+        return new ApiError(response.status, "validation_failed");
       }
     }
     return new ApiError(response.status, "request_failed");
@@ -180,11 +231,14 @@ export const api = {
     rawRequest<Job>(`/api/v1/ingestion/jobs/${id}/retry`, { method: "POST" }),
   deleteDocument: (id: string) =>
     rawRequest<void>(`/api/v1/ingestion/jobs/${id}`, { method: "DELETE" }),
-  ask: (question: string) =>
+  ask: (question: string, sessionId?: string) =>
     rawRequest<Answer>("/api/v1/retrieval/answer", {
       method: "POST",
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, ...(sessionId ? { session_id: sessionId } : {}) }),
     }),
+  getChatSessions: () => rawRequest<ChatSession[]>("/api/v1/retrieval/sessions"),
+  deleteChatSession: (id: string) =>
+    rawRequest<void>(`/api/v1/retrieval/sessions/${id}`, { method: "DELETE" }),
   async download(url: string, filename: string) {
     const headers = new Headers();
     if (accessToken) {

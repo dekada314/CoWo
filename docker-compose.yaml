@@ -34,6 +34,8 @@ services:
         condition: service_healthy
       falkordb:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - cowo_back_network
   postgres:
@@ -191,24 +193,6 @@ services:
       falkordb:
         condition: service_healthy
 
-    networks:
-      - cowo_back_network
-
-  dispatcher:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    env_file:
-      - .env
-    command: python -m src.infrastructure.taskiq.dispatcher
-    restart: unless-stopped
-    volumes:
-      - ./logs:/app/logs
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      rabbitmq:
-        condition: service_healthy
     networks:
       - cowo_back_network
 
